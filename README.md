@@ -1,6 +1,6 @@
 # Operators Subtask And Stream Partitions
 
-<br/> ![Screenshot](OperatorsSubtaskAndStreamPartitions\1.PNG)
+<br/> ![](OperatorsSubtaskAndStreamPartitions/1.PNG)
 
 * Here is a big picture overview of how operators that you define make up a directed‑acyclic graph transforming your input stream till the final results are written out using a sink. 
 
@@ -8,7 +8,7 @@
 * In between the source and the sink, you can have multiple transformation operators which work on your data.
 
 
-<br/> ![Screenshot](OperatorsSubtaskAndStreamPartitions\2.PNG)
+<br/> ![](OperatorsSubtaskAndStreamPartitions/2.PNG)
 
 * Flink programs are inherently parallel and distributed, which means that the operators that operate on streaming dataflows are spread across multiple nodes in your Flink cluster. 
 
@@ -18,7 +18,7 @@
 * Stream partitions and operator subtasks together are responsible for the distributed and parallel execution of a Flink application.
 
 
-<br/> ![Screenshot](OperatorsSubtaskAndStreamPartitions\3.PNG)
+<br/> ![](OperatorsSubtaskAndStreamPartitions/3.PNG)
 * At the very top here is the directed‑acyclic graph of your Flink application. 
 * We read in data from the source, the source is an operator, and we write out data to a sink, and we perform a number of transformations on the data within the application. 
 * Every node in this graph is an operator, and every edge in this graph is a stream. 
@@ -30,13 +30,13 @@
 * As you can see, the map transformation here has two subtasks. 
 * It has a parallelism of 2. Now, this continues. The remaining transformation, the keyBy window and apply, also runs with a parallelism of 2 till finally the output of the final operator is sent along to the sink operator, which writes it out to persistent storage somewhere.
 
-<br/> ![Screenshot](OperatorsSubtaskAndStreamPartitions\4.PNG)
+<br/> ![](OperatorsSubtaskAndStreamPartitions/4.PNG)
 * Every operator can be split into subtasks to process your input stream, and these subtasks run completely independently of one another. * These subtasks may be executed in different threads. 
 * It's also possible for these subtasks to run on different machines or on different containers within a cluster. 
 * The parallel execution of your dataflow operations is possible because of these subtasks. 
 * The number of subtasks refer to the parallelism of the individual operator.
 
-<br/> ![Screenshot](OperatorsSubtaskAndStreamPartitions\5.PNG)
+<br/> ![](OperatorsSubtaskAndStreamPartitions/5.PNG)
 * Operators which make up the notes in our directed‑acyclic graph perform the actual transformation of input data. 
 * The edges in our directed‑acyclic graph are responsible for transporting data between operators. 
 * Edges are referred to as streams. 
@@ -45,11 +45,11 @@
 * The elements in the stream partition are not shuffled or reordered but passed along as is. On the other hand, data can be transported using the redistributing pattern. 
 * This is where every operator subtask sends data to different target subtasks. The original order of the data is not reserved.
 
-<br/> ![Screenshot](OperatorsSubtaskAndStreamPartitions\6.PNG)
+<br/> ![](OperatorsSubtaskAndStreamPartitions/6.PNG)
 * If you look back at our example here, you can see the forwarding pattern in action. 
 * The stream partitions that move data between the two operator subtasks for the source and the map operator subtask transport data using the forwarding pattern.
 
-<br/> ![Screenshot](OperatorsSubtaskAndStreamPartitions\7.PNG)
+<br/> ![](OperatorsSubtaskAndStreamPartitions/7.PNG)
 * On the other hand, when data is transported between the map operator subtask and the keyBy window subtask, you can see that the data is redistributed. 
 * The original stream partitions have changed, which means one operator subtask can send data to several target subtasks. 
 * This is the redistributing pattern in action.
