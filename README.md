@@ -182,3 +182,179 @@
 
 * Consecutive operators that are run within a task are open from last to first. 
 * Consecutive operators in a task are closed from first to last.
+
+# Flink Clusters and Deployment
+
+<br/> ![](FlinkClustersAndDeployments/1.PNG)
+
+* There are three types off Flink clusters that you can set up
+*  You can set up a Flink session cluster, a Flink job cluster or a Flink application cluster
+
+<br/> ![](FlinkClustersAndDeployments/2.PNG)
+
+*  The session cluster is a long running, pre‑existing cluster
+*  The cluster remains up and running and can accept multiple jobs submissions
+*  The cluster continues to remain alive after the jobs have completed execution
+*  The lifetime of a Flink session cluster is thus not bound to the lifetime of any particular Flink job
+*  When you use a session cluster, TaskManager slots are allocated by the resource manager on job submission and released once the job is complete
+*  Because all the jobs share the same cluster, the jobs will compete for resources
+*  Also, if a JobManager or TaskManager crashes, all jobs using that JobManager or TaskManager will fail
+
+<br/> ![](FlinkClustersAndDeployments/3.PNG)
+
+*  In previous versions of Flink, the Flink session cluster used to be called the Flink Cluster in session mode, so if you see references to this, it's the same thing as the Flink session cluster
+*  The main use case for the Flink session cluster is to run interactive queries, which are short duration queries, short running queries
+*  Having a pre‑existing cluster in such condition saves a considerable amount of time when you apply for resources and start TaskManagers
+*  In the case of interactive short queries, it's important that jobs can quickly perform computations using existing resources
+*  Resources don't have to be spun up explicitly for the job
+
+<br/> ![](FlinkClustersAndDeployments/4.PNG)
+
+*  A Flink job cluster, as its name suggests, is a cluster that is specifically created for a particular job that you want to execute
+*  This job cluster will be spun up by a cluster manager such as YARN or Kubernetes
+*  Every submitted job will spin up a new instance of a Flink job cluster, and the entire cluster is then available for that job alone
+*  All cluster resources are utilized by that one job
+*  The cluster will be torn down once the job completes execution
+*  A major advantage of the job cluster is that jobs running on this cluster are isolated from other jobs
+*  A crash in the JobManager or TaskManager affects only the one job
+
+<br/> ![](FlinkClustersAndDeployments/5.PNG)
+
+*  The Flink job cluster in earlier versions used to be referred to
+*  as the Flink Cluster in job or per‑job mode
+*  The main use case for the job cluster is for very long running jobs, where jobs can run for hours or even days
+*  Such long running jobs have very high stability requirements and such jobs are typically not very sensitive to longer startup times
+*  So even if it takes time to provision startup resources from scratch, that's totally fine
+
+<br/> ![](FlinkClustersAndDeployments/6.PNG)
+
+*  The third kind of Flink cluster is the Flink application cluster
+*  Here you have a single cluster, a dedicated cluster for one Flink application that you need to execute
+*  Here, the main entry point of your Flink code will not be executed on your client, rather, it will be executed on the cluster itself
+*  The lifetime of the cluster is closely tied to the lifetime of the application
+*  The cluster is no longer needed if the application doesn't run
+*  In this case, the lifetime of the Flink application cluster is bound to the lifetime of the application
+*  This cluster offers the best separation of concerns because all of the resources of the cluster are dedicated to a single application
+*  The ResourceManager and the Dispatcher are scoped to the one application that runs on this cluster
+
+<br/> ![](FlinkClustersAndDeployments/7.PNG)
+
+*  Corresponding to each type of cluster, Flink applications can be deployed in three different modes
+*  In the session mode, the application assumes an already running cluster and uses the resources of the cluster to execute the job
+*  Applications executed in the same session cluster compete for the same resources
+*  A crashing application can affect other applications on that cluster
+*  An alternative is to deploy a Flink application in the per‑job mode
+*  This is aimed at providing better resource isolation guarantees
+*  The per‑job more uses the available cluster manager framework, either YARN or Kubernetes, to spin up a separate cluster for every submitted job, and finally, Flink applications can be deployed in application mode, where we have a long running cluster specifically scoped to that application
+*  The application mode creates a cluster per submitted application, but the main method of the application is executed on the JobManager of the cluster
+*  Apache Flink comes with first class support for a number of common deployment targets
+
+<br/> ![](FlinkClustersAndDeployments/8.PNG)
+
+*  You can deploy locally, that is, run Flink locally for basic testing and experimentation
+*  You can deploy Flink on a standalone cluster, on bare‑metal or virtual machines
+*  You can deploy Flink on top of Apache Hadoop's resource manager, YARN
+*  You can use Docker to run Flink within a containerized environment
+*  You can use Kubernetes, which offers an automated system for deploying containerized applications, or you can use Mesos, a generic resource manager for running distributed systems
+
+# Job Manager High Availability
+
+<br/> ![](JobManagerHighAvailability/1.PNG)
+
+* A regular Flink cluster has exactly one JobManager and can have multiple TaskManagers
+*  It's possible for you to configure the JobManager of a Flink cluster to work in high‑availability mode
+*  Let's discuss how
+*  The default configuration of a Flink cluster is to use a single JobManager
+*  When you have just one JobManager, that becomes a single point of failure, or an SPOF
+*  The JobManager is responsible for scheduling all your Flink applications on that cluster
+*  So if the JobManager crashes, no new applications can be submitted
+*  Any running program on the cluster will fail as well
+*  You can configure your Flink cluster in high‑availability mode to mitigate this
+*  In high‑availability mode, you will have more than one JobManager running
+
+<br/> ![](JobManagerHighAvailability/2.PNG)
+
+*  The high‑availability configuration for your JobManager will be a little different if you're working with a standalone cluster or if you're working with a YARN cluster
+*  Let's talk about the standalone cluster first
+
+<br/> ![](JobManagerHighAvailability/3.PNG)
+
+*  In a standalone cluster, which runs on bare metal machines or on virtual machines, you can have multiple JobManager processes running
+*  Only one of these JobManagers will be the leader at any point in time
+*  You can have multiple standby JobManagers, which can take over if the leader fails
+*  So if for some reason the leader JobManager crashes, any of the other JobManagers can take on the leader role
+*  There is no explicit distinction between standby JobManager instances and the leader JobManager instance
+
+<br/> ![](JobManagerHighAvailability/4.PNG)
+
+*  Imagine that you have a cluster with three JobManager instances configured
+*  One of these JobManagers will be elected the leader
+*  The cluster functions fine with one leader and multiple JobManager standbys
+*  At some point, it's possible that the node on which the JobManager runs crashes
+*  The JobManager leader no longer exists, which means one of the standby JobManagers have to take on the leader role
+*  One of the JobManagers will be elected the leader while the original JobManager leader is recovering
+*  Even after the original leader has completely recovered, the new leader continues to lead the cluster, and the recovered JobManager becomes the second standby
+
+<br/> ![](JobManagerHighAvailability/5.PNG)
+
+*  The high‑availability configuration mode in a standalone cluster requires the use of ZooKeeper
+*  ZooKeeper is what we use to elect the leader JobManager
+*  You need to configure the quorum for the ZooKeeper service so that the quorum can then elect a new leader if one is needed
+*  You then set up your masters file with all of the JobManager hosts and their web UI ports
+
+<br/> ![](JobManagerHighAvailability/6.PNG)
+
+*  If you're running a high‑availability Apache Flink cluster using the YARN resource manager, you do not need to run multiple JobManager instances and elect one of them the leader
+*  You just need a single ApplicationMaster instance, and that is enough
+*  The YARN cluster manager will restart this instance in case of failures to ensure high availability
+
+# Flink API
+
+<br/> ![](FlinkAPI/1.PNG)
+
+*  Flink actually offers a number of different APIs at different levels of abstraction
+*  All of these APIs interact and integrate with one another very neatly, and you can mix and match these APIs to process your input stream
+
+<br/> ![](FlinkAPI/2.PNG)
+
+*  At the very lowest level, we have the APIs for stateful stream processing
+*  This is the lowest level of abstraction, on top of which other high‑level APIs are built
+*  This abstraction offers timely stream processing
+*  This is basically stateful stream processing where time plays an important role
+*  It is these APIs that offer the notion of event time and processing time of streaming entities
+*  A discussion of event time and processing time is beyond the scope of this particular beginner course in Flink
+*  Stateful stream processing API allows you to manage state and runtime context
+*  These APIs provide consistent, fault‑tolerant state, allowing programs to realize very sophisticated computations
+
+<br/> ![](FlinkAPI/3.PNG)
+
+*  The data stream API that we've been working with so far is a higher level abstraction built on top of stateful stream processing functions
+*  Data streams are used to work with streaming data
+*  There is a corresponding dataset API that you can use to work with batch data for batch processing operations
+*  These APIs are core APIs to work with both unbounded as well as bounded data
+*  Both the data stream and dataset API contain common building blocks for data processing
+*  Data stream and dataset APIs are what we would use to define user‑specified transformations on input data
+*  These can be used to perform join operations on two or more streams
+*  These can do be used to perform aggregation computations on input data, as well as perform windowing operations
+
+<br/> ![](FlinkAPI/4.PNG)
+
+*  Flink also offers other higher‑level abstractions to process data
+*  The table API is a declarative domain specific language centered around the concept of data stored in tables, that is relational data
+*  Tables can be defined over batch data, as well as streaming data
+*  Tables defined over streams are dynamic tables
+*  That's because the contents of these tables can change dynamically
+*  The table API follows the relational model of processing data
+*  The APIs are intuitive, easy to use, and self‑explanatory
+*  You can perform common table‑specific operations such as selection, projection, join operations, group‑by queries, and aggregations
+*  The table APIs declaratively define what logical operation should be performed, rather than specifying exactly how the code for the operation looks
+*  All programs using the table API go through an optimizer that applies optimization rules before execution
+
+<br/> ![](FlinkAPI/5.PNG)
+
+*  The highest level API for data processing operations is the use of SQL queries on your input streams
+*  The operations that you can perform using SQL queries are the same operations that you can perform using the table API
+*  So SQL is similar to the table API in semantics and expressiveness
+*  But for the many developers who are familiar with using SQL queries to access and aggregate data, these APIs may prove to be more intuitive
+*  With SQL queries, you represent programs as SQL query expressions
+*  These expressions can then be executed over tables, which have been defined using the table API
